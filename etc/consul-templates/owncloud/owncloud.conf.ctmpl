@@ -1,0 +1,111 @@
+upstream php-handler {
+  server {{ env "NGINX_PHP_SERVER" }};
+  }
+
+server {
+  listen 80;
+  server_name {{ env "NGINX_OC_SERVERNAME" }};
+  # enforce https
+  return 301 https://$server_name$request_uri;
+  }
+
+server {
+  listen 443 ssl;
+  server_name {{ env "NGINX_OC_SERVERNAME" }};
+
+  #ssl_certificate /etc/letsencrypt/live/myserver.dyndns.org/fullchain.pem;
+  #ssl_certificate_key /etc/letsencrypt/live/myserver.dyndns.org/privkey.pem;
+
+  # Bei einem selbst signierten Zertifikat:
+  ssl_certificate /etc/ssl/nginx/owncloud.crt;
+  ssl_certificate_key /etc/ssl/nginx/owncloud.key;
+
+  # Add headers to serve security related headers
+  add_header Strict-Transport-Security "max-age=15768000; includeSubDomains; preload;";
+  add_header X-Content-Type-Options nosniff;
+  add_header X-Frame-Options "SAMEORIGIN";
+  add_header X-XSS-Protection "1; mode=block";
+  add_header X-Robots-Tag none;
+
+  #ssl_dhparam /etc/nginx/ssl/dhparams.pem;
+  #ssl_ciphers 'ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES256-GCM-SHA384:DHE-RSA-AES128-GCM-SHA256:DHE-DSS-AES128-GCM-SHA256:kEDH+AESGCM:ECDHE-RSA-AES128-SHA256:ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA:ECDHE-ECDSA-AES128-SHA:ECDHE-RSA-AES256-SHA384:ECDHE-ECDSA-AES256-SHA384:ECDHE-RSA-AES256-SHA:ECDHE-ECDSA-AES256-SHA:DHE-RSA-AES128-SHA256:DHE-RSA-AES128-SHA:DHE-DSS-AES128-SHA256:DHE-RSA-AES256-SHA256:DHE-DSS-AES256-SHA:DHE-RSA-AES256-SHA:AES128-GCM-SHA256:AES256-GCM-SHA384:AES128-SHA256:AES256-SHA256:AES128-SHA:AES256-SHA:AES:CAMELLIA:DES-CBC3-SHA:!aNULL:!eNULL:!EXPORT:!DES:!RC4:!MD5:!PSK:!aECDH:!EDH-DSS-DES-CBC3-SHA:!EDH-RSA-DES-CBC3-SHA:!KRB5-DES-CBC3-SHA';
+  #ssl_prefer_server_ciphers on;
+
+  # Path to the root of your installation
+  root /usr/share/webapps/owncloud/;
+
+  index index.php index.html;
+
+  # General PHP handler
+  location ~ \.php$ {
+   include fastcgi_params;
+   fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+   fastcgi_param HTTPS on;
+   fastcgi_pass php-handler;
+   }
+
+   #
+   # ownCloud
+   #
+   rewrite ^/caldav(.*)$ /owncloud/remote.php/caldav$1 redirect;
+   rewrite ^/carddav(.*)$ /owncloud/remote.php/carddav$1 redirect;
+   rewrite ^/webdav(.*)$ /owncloud/remote.php/webdav$1 redirect;
+
+   location / {
+    # set max upload size
+    client_max_body_size 513M;
+
+    fastcgi_buffers 64 4K;
+
+    # Disable gzip to avoid the removal of the ETag header
+    gzip off;
+
+    # Uncomment if your server is build with the ngx_pagespeed module This module is currently not supported.
+    # pagespeed off;
+
+    error_page 403 /core/templates/403.php;
+    error_page 404 /core/templates/404.php;
+
+
+    proxy_set_header Host $host:$server_port;
+    # The following 2 rules are only needed with webfinger
+    rewrite ^/.well-known/host-meta /owncloud/public.php?service=host-meta last;
+    rewrite ^/.well-known/host-meta.json /owncloud/public.php?service=host-meta-json last;
+    rewrite ^/.well-known/carddav /remote.php/carddav redirect;
+    rewrite ^/.well-known/caldav /remote.php/caldav redirect;
+
+    rewrite ^(/core/doc/[^\/]+/)$ /$1/index.html;
+
+    try_files $uri $uri/ /index.php;
+
+     # ownCloud specific PHP handler
+     location ~ \.php(?:$|/) {
+      fastcgi_split_path_info ^(.+\.php)(/.+)$;
+      include fastcgi_params;
+      fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+      fastcgi_param PATH_INFO $fastcgi_path_info;
+      fastcgi_param HTTPS on;
+      fastcgi_param modHeadersAvailable true; #Avoid sending the security headers twice
+      fastcgi_pass php-handler;
+      fastcgi_read_timeout 300;
+      fastcgi_param PHP_VALUE "open_basedir=/usr/share/webapps/owncloud/:/usr/share/webapps/owncloud/lib/private/:/usr/share/webapps/owncloud/config/:/tmp/:/var/lib/owncloud/data/:/dev/urandom";
+     }
+   }
+
+   location = /robots.txt {
+    allow all;
+    log_not_found off;
+    access_log off;
+   }
+
+   location ~ ^/(?:\.htaccess|data|config|db_structure\.xml|README){
+    deny all;
+   }
+
+   # Optional: set long EXPIRES header on static assets
+   location ~* ^(/.+\.(?:jpg|jpeg|gif|bmp|ico|png|css|js|swf))$ {
+    expires 30d;
+    # Optional: Don't log access to assets
+    access_log off;
+   }
+}

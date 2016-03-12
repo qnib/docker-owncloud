@@ -1,0 +1,9 @@
+owncloud:
+    image: qnib/owncloud
+    hostname: owncloud
+    container_name: owncloud
+    ports:
+     - 8080:80
+     - 443:443
+    #volumes:
+    # - ./etc/ssl/nginx/:/etc/ssl/nginx/
