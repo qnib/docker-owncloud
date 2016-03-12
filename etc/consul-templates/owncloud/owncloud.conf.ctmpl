@@ -47,9 +47,9 @@ server {
    #
    # ownCloud
    #
-   rewrite ^/caldav(.*)$ /owncloud/remote.php/caldav$1 redirect;
-   rewrite ^/carddav(.*)$ /owncloud/remote.php/carddav$1 redirect;
-   rewrite ^/webdav(.*)$ /owncloud/remote.php/webdav$1 redirect;
+   rewrite ^/caldav(.*)$ /remote.php/caldav$1 redirect;
+   rewrite ^/carddav(.*)$ /remote.php/carddav$1 redirect;
+   rewrite ^/webdav(.*)$ /remote.php/webdav$1 redirect;
 
    location / {
     # set max upload size
@@ -88,7 +88,7 @@ server {
       fastcgi_param modHeadersAvailable true; #Avoid sending the security headers twice
       fastcgi_pass php-handler;
       fastcgi_read_timeout 300;
-      fastcgi_param PHP_VALUE "open_basedir=/usr/share/webapps/owncloud/:/usr/share/webapps/owncloud/lib/private/:/usr/share/webapps/owncloud/config/:/tmp/:/var/lib/owncloud/data/:/dev/urandom";
+      fastcgi_param PHP_VALUE "open_basedir=/usr/share/webapps/owncloud/:/usr/share/webapps/owncloud/lib/private/:/usr/share/webapps/owncloud/config/:/tmp/:/data/owncloud/:/dev/urandom";
      }
    }
 
