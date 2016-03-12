@@ -2,8 +2,8 @@ FROM qnib/alpn-syslog
 
 # do all in one step
 RUN apk upgrade --update && \
-    apk add owncloud-sqlite nginx php-fpm
-RUN apk add nmap bc
+    apk add owncloud-sqlite nginx php-fpm nmap bc && \
+    rm -rf /var/cache/apk/*
 ENV NGINX_PHP_SERVER=localhost:9000 \
     NGINX_OC_SERVERNAME=192.168.99.100
 
