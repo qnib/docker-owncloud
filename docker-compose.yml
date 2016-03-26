@@ -5,5 +5,8 @@ owncloud:
     ports:
      - 8080:80
      - 443:443
-    #volumes:
-    # - ./etc/ssl/nginx/:/etc/ssl/nginx/
+    environment:
+     - OC_UID=501
+    volumes:
+     - ./data/:/data/
+     #- ./config/:/var/www/html/config
