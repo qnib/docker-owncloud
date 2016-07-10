@@ -1,4 +1,4 @@
-FROM qnib/alpn-syslog
+FROM qnib/alpn-rsyslog
 
 # do all in one step
 RUN apk upgrade --update \
